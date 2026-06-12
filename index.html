@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>WOLF LABS | The World Cup Tour (A2)</title>
+    
+    <!-- Fonts: Teko (Sports Headers), Inter (Clean UI) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Teko:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        bgBase: '#0B132B',       /* Deep Navy */
+                        panelDark: '#1C2541',    /* Dark Blue */
+                        panelHover: '#3A506B',   /* Lighter Blue */
+                        textMain: '#F8FAFC',     /* White */
+                        textMuted: '#94A3B8',    /* Slate */
+                        accentGold: '#F3A712',   /* Trophy Gold */
+                        accentGreen: '#47A025',  /* Pitch Green */
+                        accentRed: '#E63946'     /* Red Card */
+                    },
+                    fontFamily: {
+                        epic: ['"Teko"', 'sans-serif'],
+                        ui: ['"Inter"', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { 
+            background-color: #0B132B; color: #F8FAFC; overflow: hidden; font-family: 'Inter', sans-serif; 
+            transition: background-color 1s ease; 
+            background-image: linear-gradient(rgba(28, 37, 65, 0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(28, 37, 65, 0.5) 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+        
+        body.immersive-shift { background-color: #051F10; background-image: linear-gradient(rgba(71, 160, 37, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(71, 160, 37, 0.2) 1px, transparent 1px); }
+        body.immersive-shift .ws-panel { border-color: rgba(71, 160, 37, 0.4); box-shadow: 0 10px 40px rgba(71, 160, 37, 0.15); }
+        
+        .ws-panel { background: #1C2541; border: 1px solid #3A506B; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #3A506B; border-radius: 10px; }
+
+        @keyframes fadeOut { to { opacity: 0; pointer-events: none; } }
+        .fade-out { animation: fadeOut 0.8s forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in { animation: fadeIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+        @keyframes damageShake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-15px); } 40%, 80% { transform: translateX(15px); } }
+        .damage-shake { animation: damageShake 0.4s ease-in-out; }
+        
+        /* Tactical Board */
+        .pitch-bg { background-color: #2F612C; background-image: repeating-linear-gradient(0deg, transparent, transparent 40px, rgba(255,255,255,0.05) 40px, rgba(255,255,255,0.05) 80px); border: 4px solid #fff; position: relative; }
+        .pitch-lines { position: absolute; inset: 10px; border: 2px solid rgba(255,255,255,0.5); pointer-events: none; }
+        .pitch-circle { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 80px; height: 80px; border: 2px solid rgba(255,255,255,0.5); border-radius: 50%; pointer-events: none; }
+        .player-pill { background: #F8FAFC; color: #0B132B; border: 2px solid #0B132B; font-weight: 800; text-transform: uppercase; box-shadow: 0 4px 0 #0B132B; transition: all 0.1s; cursor: pointer; }
+        .player-pill:active { transform: translateY(4px); box-shadow: 0 0 0 #0B132B; }
+
+        /* VAR Monitor */
+        .var-monitor { background: #000; border: 12px solid #222; border-radius: 8px; position: relative; overflow: hidden; box-shadow: 0 0 30px rgba(0,0,0,0.8), inset 0 0 20px rgba(255,255,255,0.1); }
+        .var-scanline { position: absolute; width: 100%; height: 5px; background: rgba(255,255,255,0.1); animation: scan 3s linear infinite; pointer-events: none; z-index: 10; }
+        @keyframes scan { 0% { top: -10%; } 100% { top: 110%; } }
+        
+        .var-overlay { position: absolute; inset: 0; display: flex; items-center; justify-content: center; font-family: 'Teko', sans-serif; font-size: 6rem; z-index: 20; opacity: 0; transition: opacity 0.3s; pointer-events: none; font-weight: bold; letter-spacing: 0.1em; }
+        .var-goal { background: rgba(71, 160, 37, 0.9); color: white; }
+        .var-offside { background: rgba(230, 57, 70, 0.9); color: white; }
+
+        /* Boarding Pass */
+        .boarding-pass { background: #F8FAFC; color: #0B132B; border-radius: 16px; display: flex; position: relative; overflow: hidden; box-shadow: 0 15px 30px rgba(0,0,0,0.4); }
+        .bp-left { flex: 3; padding: 24px; border-right: 2px dashed #94A3B8; position: relative; }
+        .bp-right { flex: 1; padding: 24px; background: #E2E8F0; }
+        .bp-cutout-top { position: absolute; top: -15px; right: -15px; width: 30px; height: 30px; background: #0B132B; border-radius: 50%; }
+        .bp-cutout-bottom { position: absolute; bottom: -15px; right: -15px; width: 30px; height: 30px; background: #0B132B; border-radius: 50%; }
+
+        .btn-sport { background: #F3A712; color: #0B132B; font-family: 'Teko', sans-serif; text-transform: uppercase; font-size: 1.5rem; letter-spacing: 0.05em; transition: all 0.2s; box-shadow: 0 6px 0 #B57A09; cursor: pointer; }
+        .btn-sport:active { transform: translateY(6px); box-shadow: 0 0 0 #B57A09; }
+
+        .teacher-drawer { position: fixed; top: 0; right: -400px; width: 400px; height: 100vh; background: #0B132B; z-index: 200; transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1); border-left: 2px solid #F3A712; box-shadow: -10px 0 30px rgba(0,0,0,0.8); }
+        .teacher-drawer.open { right: 0; }
+
+        .lever-track { width: 140px; height: 48px; background: #1C2541; border-radius: 24px; position: relative; cursor: pointer; border: 2px solid #3A506B; }
+        .lever-thumb { width: 56px; height: 40px; background: #94A3B8; border-radius: 20px; position: absolute; top: 2px; left: 4px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .lever-track.toggled .lever-thumb { left: 76px; background: #F3A712; box-shadow: 0 0 15px rgba(243, 167, 18, 0.6); }
+
+        .progress-bar-fill { transition: width 0.3s ease; }
+
+        .grammar-link { color: #F3A712; font-weight: 800; border-bottom: 2px solid #F3A712; cursor: pointer; transition: all 0.2s; padding: 0 4px; background: rgba(243, 167, 18, 0.1); }
+        .grammar-link:hover { background: rgba(243, 167, 18, 0.3); }
+        .grammar-link.active { background: #47A025; color: #FFF; border-bottom-color: #2F612C; }
+        
+        /* Commentator Booth */
+        .commentator-screen { border: 4px solid #3A506B; border-radius: 12px; overflow: hidden; position: relative; background: #000; box-shadow: inset 0 0 20px rgba(243,167,18,0.2); }
+        .live-badge { position: absolute; top: 10px; right: 10px; background: #E63946; color: white; padding: 2px 10px; border-radius: 4px; font-weight: bold; font-family: 'Teko'; letter-spacing: 2px; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+    </style>
+</head>
+<body class="flex flex-col h-screen select-none relative">
+    
+    <!-- LOADING SCREEN -->
+    <div id="loading-screen" class="fixed inset-0 z-[1000] bg-bgBase flex flex-col items-center justify-center">
+        <div class="text-accentGold text-7xl mb-6 animate-bounce"><i class="fa-solid fa-trophy drop-shadow-lg"></i></div>
+        <h1 class="font-epic text-6xl text-textMain tracking-widest mb-2 uppercase">MATCH INITIATING</h1>
+        <p class="font-ui text-accentGold tracking-widest mb-10 font-bold uppercase border-b border-accentGold pb-1">A2 Hardcore Edition</p>
+        <button onclick="initializeSystem()" class="btn-sport px-16 py-3 rounded">KICK OFF</button>
+    </div>
+
+    <!-- DAMAGE OVERLAY -->
+    <div id="damage-overlay" class="fixed inset-0 z-[800] bg-accentRed/10 border-[12px] border-accentRed/40 opacity-0 pointer-events-none transition-opacity duration-100 flex items-center justify-center">
+        <div class="bg-accentRed text-white font-epic text-9xl px-12 py-4 rounded rotate-12 shadow-2xl">RED CARD</div>
+    </div>
+
+    <!-- PRAISE OVERLAY -->
+    <div id="praise-overlay" class="fixed inset-0 z-[900] flex items-center justify-center pointer-events-none opacity-0">
+        <div id="praise-card" class="bg-accentGreen text-white px-20 py-8 rounded-xl shadow-[0_0_50px_rgba(71,160,37,0.6)] text-center transform scale-50 transition-transform duration-300">
+            <h2 id="praise-text" class="font-epic text-7xl font-black uppercase tracking-widest mb-0">GOAL!</h2>
+            <p id="praise-sub" class="font-ui text-lg font-bold tracking-[0.2em] uppercase text-white/80">Great Play</p>
+        </div>
+    </div>
+
+    <!-- TEACHER DRAWER (VAR ROOM) -->
+    <div id="teacher-panel" class="teacher-drawer p-8 flex flex-col">
+        <div class="flex justify-between items-center mb-8 border-b-2 border-panelHover pb-4">
+            <h2 class="font-epic text-4xl text-accentGold tracking-widest uppercase"><i class="fa-solid fa-desktop mr-3"></i> VAR Room</h2>
+            <button onclick="toggleTeacherPanel()" class="text-textMuted hover:text-accentGold transition-colors"><i class="fa-solid fa-xmark text-3xl"></i></button>
+        </div>
+        <textarea id="teacher-notes" class="flex-1 bg-panelDark border-2 border-panelHover p-5 font-ui text-lg text-textMain focus:outline-none focus:border-accentGold resize-none mb-8 rounded font-bold" placeholder="> Log student performance and advanced grammar analysis here..."></textarea>
+        <div class="space-y-4">
+            <p class="font-epic text-xl text-textMuted tracking-widest uppercase text-center">Ref Decisions</p>
+            <button onclick="triggerPraise('BRILLIANT!', 'Perfect Grammar')" class="w-full py-3 bg-accentGreen text-white rounded hover:brightness-110 transition-all font-epic text-2xl tracking-widest uppercase shadow-[0_4px_0_#2F612C] active:translate-y-1 active:shadow-none">Award: Grammar Goal</button>
+            <button onclick="triggerPraise('WHAT A STRIKE!', 'Amazing Vocab')" class="w-full py-3 bg-accentGold text-bgBase rounded hover:brightness-110 transition-all font-epic text-2xl tracking-widest uppercase shadow-[0_4px_0_#B57A09] active:translate-y-1 active:shadow-none">Award: Vocab Goal</button>
+        </div>
+    </div>
+
+    <!-- TOP HUD -->
+    <header class="h-24 bg-panelDark border-b-4 border-panelHover z-100 flex items-center justify-between px-8 shrink-0 relative z-40">
+        <div class="flex items-center gap-8">
+            <div id="health-bar" class="flex gap-3 text-2xl text-accentRed drop-shadow-md">
+                <i class="fa-solid fa-ticket" id="hp-1"></i><i class="fa-solid fa-ticket" id="hp-2"></i><i class="fa-solid fa-ticket" id="hp-3"></i>
+            </div>
+            <div class="flex flex-col border-l-2 border-panelHover pl-6">
+                <span class="font-ui text-[10px] text-textMuted uppercase tracking-[0.2em] font-bold">Match Score</span>
+                <span id="xp-counter" class="font-epic text-3xl text-accentGold tracking-wider leading-none">0000</span>
+            </div>
+        </div>
+        <div class="absolute left-1/2 -translate-x-1/2 text-center bg-bgBase px-8 py-2 border-2 border-panelHover rounded-b-xl border-t-0 shadow-lg">
+            <p id="hud-name" class="font-epic text-2xl text-textMain tracking-[0.2em] uppercase">GUEST_FAN</p>
+            <p class="font-ui text-[9px] text-accentGreen tracking-widest uppercase mt-1 font-bold">2026 World Cup Tour (A2)</p>
+        </div>
+        <div class="flex items-center gap-4">
+            <button onclick="toggleFullScreen()" class="w-12 h-12 bg-panelHover flex items-center justify-center rounded text-textMain hover:bg-accentGold hover:text-bgBase transition-colors" title="Full Screen"><i class="fa-solid fa-expand text-xl" id="fs-icon"></i></button>
+            <button onclick="toggleTeacherPanel()" class="font-epic text-xl text-bgBase bg-accentGold tracking-widest uppercase px-6 py-2 rounded hover:brightness-110 transition-all"><i class="fa-solid fa-ear-listen mr-2"></i> VAR</button>
+        </div>
+    </header>
+
+    <!-- MAIN ARENA -->
+    <main id="arena" class="flex-1 relative overflow-y-auto overflow-x-hidden flex items-center justify-center p-4 md:p-8">
+        <div id="step-container" class="w-full max-w-5xl transition-all duration-300 relative z-10 h-full flex flex-col justify-center pb-20"></div>
+    </main>
+
+    <!-- BOTTOM NAVIGATION -->
+    <footer class="h-20 bg-panelDark border-t-4 border-panelHover z-100 flex items-center justify-between px-8 shrink-0 relative z-40">
+        <div class="w-1/3">
+            <div class="w-full bg-bgBase h-2 rounded-full overflow-hidden border border-panelHover">
+                <div id="progress-fill" class="h-full bg-accentGreen transition-all duration-500" style="width: 4%"></div>
+            </div>
+        </div>
+        <div class="w-1/3 text-center">
+            <span id="page-counter" class="font-epic text-textMuted text-xl tracking-[0.3em] uppercase">PAGE 01 / 25</span>
+        </div>
+        <div class="w-1/3 flex justify-end gap-4">
+            <button id="btn-prev" onclick="nav(-1)" class="w-12 h-12 flex items-center justify-center text-textMain bg-panelHover rounded hover:bg-textMuted disabled:opacity-20 transition-all shadow-[0_4px_0_#1C2541] active:translate-y-1 active:shadow-none"><i class="fa-solid fa-chevron-left text-xl"></i></button>
+            <button id="btn-next" onclick="nav(1)" class="w-12 h-12 flex items-center justify-center text-bgBase bg-accentGreen rounded hover:brightness-110 transition-all shadow-[0_4px_0_#2F612C] active:translate-y-1 active:shadow-none disabled:opacity-20"><i class="fa-solid fa-chevron-right text-xl"></i></button>
+        </div>
+    </footer>
+
+    <script>
+        // --- STATE MANAGEMENT ---
+        let state = { step: 0, hp: 3, xp: 0, studentName: "GUEST_FAN", mechanics: {}, activeQuestions: {} };
+
+        // UI HELPER: Speaking Prompt Box
+        const buildSpeakingPrompt = (q, starter) => {
+            if(!q) return '';
+            return `
+                <div class="mt-8 fade-in max-w-xl mx-auto bg-panelDark border-l-8 border-accentGold p-6 shadow-xl relative overflow-hidden">
+                    <div class="absolute -right-4 -top-4 text-8xl text-bgBase opacity-50"><i class="fa-solid fa-microphone"></i></div>
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="bg-accentGold text-bgBase font-epic px-3 py-1 text-sm tracking-widest uppercase rounded-sm">INTERVIEW</span>
+                    </div>
+                    <p class="font-ui text-xl text-textMain font-bold mb-4 relative z-10">"${q}"</p>
+                    <p class="font-epic text-accentGold text-2xl tracking-wide relative z-10">"${starter}"</p>
+                </div>`;
+        };
+
+        // --- LESSON DATA (A2 HARDCORE LEVEL) ---
+        const lesson = [
+            // ACT I: Setup & Briefing
+            { type: 'cover', title: 'THE WORLD CUP TOUR', subtitle: 'Destination 2026', desc: 'A2 Level. Master Comparatives, Superlatives, and Past Simple context.', icon: 'fa-plane-departure' },
+            { type: 'idReg', title: 'FAN PASSPORT', desc: 'Enter your name to generate your official tournament ticket.' },
+            { type: 'moodboard', title: 'STADIUM CRAVINGS', instruction: 'The 2026 World Cup is in 3 countries. What is the best stadium food?', 
+              options: [
+                  { id: 'hotdog', label: 'New York Hot Dog (USA)', icon: 'fa-hotdog' },
+                  { id: 'nachos', label: 'Spicy Nachos (Mexico)', icon: 'fa-pepper-hot' },
+                  { id: 'poutine', label: 'Poutine & Fries (Canada)', icon: 'fa-bowl-food' }
+              ], 
+              followUpQ: 'Why did you choose this food?', starter: '"I chose this food because..."' },
+            { type: 'debate', title: 'THE BIG QUESTION', q: 'The 2026 World Cup is the largest ever. Is a bigger tournament always a better tournament?', starter: '"I think a bigger tournament is / isn\'t better because..."' },
+            
+            // ACT II: Fluency Toolkit (Comparatives & History)
+            { type: 'matchVocab', title: 'THE TERMINOLOGY', pairs: [{w:'Distance', d:'How far it is from one place to another.'}, {w:'Broadcaster', d:'The TV channel that shows the matches.'}, {w:'Legacy', d:'What a team leaves behind in history.'}] },
+            
+            { type: 'boardingPassInteractive', title: 'FLIGHT 2026', from: 'WORLD', to: 'NORTH AMERICA', date: 'JUN 2026',
+              text: 'Canada is <span class="grammar-link" onclick="openGrammarModal(this, \'Comparative\', \'Use -ER + THAN to compare two things.\', \'Is your country colder or hotter than Canada?\', \'My country is...\')">colder than</span> Mexico, but the USA has <span class="grammar-link" onclick="openGrammarModal(this, \'Superlative\', \'Use THE MOST for long words to say it is #1.\', \'What is the most expensive thing you own?\', \'The most expensive thing I own is...\')">the most</span> stadiums. The travel distances this year are <span class="grammar-link" onclick="openGrammarModal(this, \'Comparative\', \'Long-ER. To compare distance.\', \'Is the USA bigger than your country?\', \'Yes, the USA is bigger than...\')">longer than</span> any other World Cup. Players will be very tired.' },
+              
+            { type: 'boardingPassInteractive', title: 'THE KINGS', from: 'BRAZIL', to: 'GLORY', date: 'SINCE 1958',
+              text: 'Brazil is <span class="grammar-link" onclick="openGrammarModal(this, \'Superlative\', \'The #1 best team in history. (Irregular: Good -> Better -> Best)\', \'Who is the best player in Brazil today?\', \'The best player is...\')">the best</span> team in history. They won their 5th star in 2002. Back then, Ronaldo was <span class="grammar-link" onclick="openGrammarModal(this, \'Comparative\', \'Comparing Ronaldo to everyone else. (Irregular: Good -> Better)\', \'Are you better at football or basketball?\', \'I am better at...\')">better than</span> everyone else. He scored two goals in the final match.' },
+
+            { type: 'tacticalBoard', title: 'FORMATION 1', blocks: ['Canada', 'is', 'colder', 'than', 'Mexico'], correct: 'Canada is colder than Mexico', followUpQ: 'Is your country colder or hotter than Canada?', starter: '"My country is..."' },
+
+            // ACT III: Grammar Shift (Comparatives vs Superlatives)
+            { type: 'shift', title: 'TACTICAL CHANGE', desc: 'To compare 2 things, use COMPARATIVES (-er / more). To find the #1 thing in a group, use SUPERLATIVES (-est / the most).', bg: 'immersive-shift' },
+            
+            { type: 'lever', title: 'GRAMMAR: SHORT ADJECTIVES', conceptA: 'Comparative (2 things)', textA: 'Brazil is FASTER than Germany.', conceptB: 'Superlative (The #1)', textB: 'Brazil is THE FASTEST team.', rule: 'Short words: Add -er for Comparatives. Add THE + -est for Superlatives.' },
+            { type: 'lever', title: 'GRAMMAR: LONG ADJECTIVES', conceptA: 'Comparative (2 things)', textA: 'This stadium is MORE EXPENSIVE.', conceptB: 'Superlative (The #1)', textB: 'This is THE MOST EXPENSIVE stadium.', rule: 'Long words (3+ syllables): Use MORE for Comparatives. Use THE MOST for Superlatives.' },
+            
+            // The VAR Monitors (Multiple Choice A2 + Irregulars)
+            { type: 'mcqVar', title: 'VAR DECISION 1', q: 'The final match was ___ than the semi-final.', options: ['more exciting', 'excitinger', 'most exciting'], correct: 0, followUpQ: 'What is the most exciting sport in the world?', starter: '"I think the most exciting sport is..."' },
+            
+            { type: 'irregularVar', title: 'VAR REVIEW: IRREGULARS', instruction: 'Review the rules for GOOD and BAD before proceeding.', goodComp: 'Better', goodSup: 'The Best', badComp: 'Worse', badSup: 'The Worst' },
+
+            { type: 'mcqVar', title: 'VAR DECISION 2', q: 'The weather in Canada is ___ than in Mexico.', options: ['more cold', 'colder', 'the coldest'], correct: 1, followUpQ: 'Which of the three host countries has the best food?', starter: '"I think ___ has the best food because..."' },
+            
+            // ACT IV: Field Simulation (Output)
+            { type: 'qRoulette', title: 'ULTIMATE ROULETTE', instruction: 'Spin to answer a question. Answered questions will be removed from the pool!', 
+              questions: ['Which city is bigger: New York or Toronto?', 'Is Mexico City hotter than Los Angeles?', 'Which stadium is the most modern?', 'Is flying faster than taking a train?', 'Who won the last World Cup?', 'Did Brazil play well in 2014?', 'Where was the 2022 World Cup?', 'Who scored the best goal last year?'] },
+            
+            { type: 'tacticalBoard', title: 'FORMATION 2', blocks: ['Brazil', 'was', 'the', 'best', 'team'], correct: 'Brazil was the best team', followUpQ: 'Why was Brazil the best team?', starter: '"They were the best because..."' },
+            
+            { type: 'commentatorBooth', title: 'THE COMMENTATOR', situation: 'A fast player runs past the defender to score.', prompt: 'You are the TV Commentator! Record your voice describing this moment using Comparatives or Superlatives.' },
+            
+            // ACT V: Wrap-up & Reflection
+            { type: 'crossroads', title: 'THE FAN DILEMMA', dilemma: 'You only have $5,000. Do you buy ONE VIP ticket for the Final, or do you buy 10 cheap tickets to take all your friends to a group stage match?', opt1: '1 VIP Ticket', opt2: '10 Cheap Tickets' },
+
+            { type: 'debate', title: 'DEEP THOUGHT: GEOGRAPHY', q: 'The travel distances are longer this year. The weather changes from snow in Canada to heat in Mexico. Will this affect the players?', starter: '"I think it will/won\'t affect the players because..."' },
+            { type: 'debate', title: 'DEEP THOUGHT: THE HEXA', q: 'Brazil won in 2002 but has struggled since. Do they have the best players to win the 6th star (The Hexa) in 2026?', starter: '"I think Brazil has / doesn\'t have the best players because..."' },
+            { type: 'debate', title: 'DEEP THOUGHT: LEGACY', q: 'What is the most important legacy a World Cup can leave for a country?', starter: '"The most important legacy is..."' },
+            { type: 'homework', title: 'TOUR COMPLETE', desc: 'Your analytical training is over. Download the Syntax App to solidify your grammar.', appName: 'Fan Syntax App' },
+            { type: 'curtain', title: 'WORLD CHAMPION', desc: 'You mastered Comparatives, Superlatives, Past Simple, and Critical Analysis!' }
+        ];
+
+        // --- CORE FUNCTIONS ---
+        function initializeSystem() { document.getElementById('loading-screen').classList.add('fade-out'); loadNotes(); render(); }
+
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {});
+                document.getElementById('fs-icon').classList.replace('fa-expand', 'fa-compress');
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                    document.getElementById('fs-icon').classList.replace('fa-compress', 'fa-expand');
+                }
+            }
+        }
+
+        function updateHUD() {
+            for(let i=1; i<=3; i++) {
+                const heart = document.getElementById(`hp-${i}`);
+                heart.style.opacity = (i <= state.hp) ? "1" : "0.2";
+            }
+            document.getElementById('hud-name').innerText = state.studentName;
+            document.getElementById('xp-counter').innerText = String(state.xp).padStart(4, '0');
+            
+            const total = lesson.length;
+            document.getElementById('page-counter').innerText = `PAGE ${String(state.step + 1).padStart(2, '0')} / ${total}`;
+            document.getElementById('progress-fill').style.width = `${((state.step + 1) / total) * 100}%`;
+            
+            document.getElementById('btn-prev').disabled = state.step === 0;
+            document.getElementById('btn-next').disabled = state.step === total - 1;
+            
+            if(lesson[state.step].bg === 'immersive-shift') document.body.classList.add('immersive-shift');
+            else document.body.classList.remove('immersive-shift');
+        }
+
+        function nav(dir) { 
+            let n = state.step + dir; 
+            if(n >= 0 && n < lesson.length) { 
+                state.step = n; 
+                render(); 
+            } 
+        }
+
+        function takeDamage() {
+            if(state.hp > 0) state.hp--;
+            const overlay = document.getElementById('damage-overlay');
+            overlay.classList.replace('opacity-0', 'opacity-100');
+            document.getElementById('arena').classList.add('damage-shake');
+            updateHUD();
+            setTimeout(() => { overlay.classList.replace('opacity-100', 'opacity-0'); document.getElementById('arena').classList.remove('damage-shake'); }, 400);
+        }
+
+        function triggerPraise(mainText = 'GOAL!', subText = 'GREAT PLAY') {
+            const overlay = document.getElementById('praise-overlay');
+            const card = document.getElementById('praise-card');
+            document.getElementById('praise-text').innerText = mainText; document.getElementById('praise-sub').innerText = subText;
+            state.xp += 100; updateHUD();
+            
+            overlay.classList.remove('opacity-0', 'pointer-events-none');
+            card.classList.remove('scale-50'); card.classList.add('scale-100');
+            
+            shootConfetti();
+            
+            setTimeout(() => {
+                overlay.classList.add('opacity-0', 'pointer-events-none');
+                card.classList.remove('scale-100'); card.classList.add('scale-50');
+            }, 2000);
+        }
+
+        function toggleTeacherPanel() { document.getElementById('teacher-panel').classList.toggle('open'); }
+
+        const notesEl = document.getElementById('teacher-notes');
+        function loadNotes() { const saved = localStorage.getItem('wolfNotes_WorldCupA2'); if(saved) notesEl.value = saved; }
+        notesEl.addEventListener('input', () => { localStorage.setItem('wolfNotes_WorldCupA2', notesEl.value); });
+
+        // --- RENDER ENGINE ---
+        function render() {
+            const container = document.getElementById('step-container');
+            const d = lesson[state.step];
+            container.innerHTML = ''; updateHUD();
+            let content = '';
+
+            switch(d.type) {
+                case 'cover':
+                    content = `
+                        <div class="text-center fade-in flex flex-col items-center">
+                            <i class="fa-solid ${d.icon} text-7xl text-accentGreen mb-6 drop-shadow-lg"></i>
+                            <h1 class="font-epic text-6xl md:text-8xl text-textMain tracking-widest uppercase mb-4 text-shadow-md">${d.title}</h1>
+                            <h2 class="font-epic text-3xl text-accentGold tracking-widest uppercase mb-8 bg-panelDark px-6 py-2 rounded-sm border border-accentGold inline-block">${d.subtitle}</h2>
+                            <p class="font-ui text-sm text-textMuted max-w-lg mx-auto ws-panel p-6 border-l-4 border-accentGreen font-bold">${d.desc}</p>
+                        </div>`;
+                    break;
+                case 'idReg':
+                    content = `
+                        <div class="text-center fade-in w-full max-w-xl mx-auto ws-panel p-16 border-t-8 border-accentGold">
+                            <i class="fa-solid fa-id-card text-5xl text-accentGold mb-6"></i>
+                            <h2 class="font-epic text-5xl text-textMain mb-4 tracking-widest uppercase">${d.title}</h2>
+                            <p class="font-ui text-textMuted text-sm font-bold mb-10 uppercase">${d.desc}</p>
+                            <div class="relative mb-12">
+                                <input type="text" id="id-input" class="w-full bg-bgBase border-2 border-panelHover p-4 text-center font-epic text-4xl text-textMain focus:outline-none focus:border-accentGold transition-colors uppercase rounded" placeholder="ENTER SURNAME">
+                            </div>
+                            <button onclick="registerID()" class="w-full btn-sport py-4 rounded text-xl">GENERATE TICKET</button>
+                        </div>`;
+                    break;
+                case 'moodboard':
+                    content = `
+                        <div class="w-full max-w-5xl mx-auto fade-in flex flex-col items-center">
+                            <h2 class="font-epic text-5xl text-textMain mb-4 tracking-widest uppercase">${d.title}</h2>
+                            <p class="font-ui text-textMuted text-sm mb-10 font-bold uppercase tracking-widest">${d.instruction}</p>
+                            
+                            <div class="flex flex-col md:flex-row w-full gap-6 mb-10">
+                                <div class="w-full md:w-1/2 flex flex-col gap-4">
+                                    ${d.options.map((opt, i) => `
+                                        <button onclick="selectMoodboard(this, '${opt.id}')" class="mood-btn w-full bg-panelDark border-2 border-panelHover p-6 text-left font-epic text-3xl text-textMain hover:border-accentGreen transition-all group flex items-center justify-between rounded">
+                                            <span class="tracking-widest uppercase">${opt.label}</span>
+                                            <i class="fa-solid ${opt.icon} text-textMuted group-hover:text-accentGreen transition-colors"></i>
+                                        </button>
+                                    `).join('')}
+                                </div>
+                                
+                                <div class="w-full md:w-1/2 relative bg-bgBase border-4 border-panelHover flex items-center justify-center min-h-[250px] shadow-inner overflow-hidden rounded pitch-bg">
+                                    <div class="pitch-lines"></div><div class="pitch-circle"></div>
+                                    <i id="mood-icon" class="fa-solid fa-map-location-dot text-7xl text-white/20 relative z-10 transition-all duration-500"></i>
+                                </div>
+                            </div>
+
+                            <button id="confirm-mood-btn" onclick="confirmMoodboard()" class="btn-sport px-16 py-4 rounded text-xl opacity-50 pointer-events-none transition-all">CONFIRM ZONE</button>
+
+                            <div id="follow-up-box" class="hidden w-full max-w-3xl">
+                                ${buildSpeakingPrompt(d.followUpQ, d.starter)}
+                            </div>
+                        </div>`;
+                    break;
+                case 'debate':
+                    content = `
+                        <div class="w-full max-w-4xl mx-auto text-center fade-in h-full flex flex-col justify-center items-center">
+                            <h2 class="font-epic text-3xl tracking-widest text-accentGold mb-8 uppercase bg-panelDark px-4 py-1 border border-accentGold rounded">${d.title}</h2>
+                            <div class="ws-panel p-12 md:p-16 mb-10 relative overflow-hidden border-l-8 border-accentGreen w-full rounded-xl">
+                                <p class="font-ui text-3xl md:text-4xl leading-relaxed text-textMain mb-8 font-bold">"${d.q}"</p>
+                                <p class="font-epic text-accentGold text-3xl tracking-wide uppercase">"${d.starter}"</p>
+                            </div>
+                            <p class="font-ui text-textMuted text-sm font-bold animate-pulse uppercase"><i class="fa-solid fa-microphone mr-2"></i> Discuss with Teacher</p>
+                        </div>`;
+                    break;
+                case 'matchVocab':
+                    content = `
+                        <div class="w-full max-w-4xl mx-auto fade-in">
+                            <h2 class="font-epic text-5xl text-textMain mb-12 text-center uppercase tracking-widest">${d.title}</h2>
+                            <div class="flex flex-col md:flex-row gap-8">
+                                <div class="w-full md:w-1/3 flex flex-col gap-4" id="vocab-bank">
+                                    ${[...d.pairs].sort(()=>Math.random()-0.5).map(p => `
+                                        <button onclick="selectVocab(this)" class="vocab-pill bg-panelDark border-2 border-panelHover p-5 font-epic text-3xl text-textMain hover:border-accentGreen transition-colors rounded shadow-md" data-word="${p.w}">${p.w}</button>
+                                    `).join('')}
+                                </div>
+                                <div class="w-full md:w-2/3 flex flex-col gap-4">
+                                    ${[...d.pairs].sort(()=>Math.random()-0.5).map((p, i) => `
+                                        <div class="bg-panelDark border-2 border-panelHover p-4 shadow-sm flex items-center gap-6 rounded">
+                                            <div class="vocab-drop w-48 h-16 border-2 border-dashed border-textMuted flex items-center justify-center cursor-pointer bg-bgBase transition-colors rounded" onclick="dropVocab(this, '${p.w}')"></div>
+                                            <p class="font-ui text-lg text-textMain flex-1 font-bold">"${p.d}"</p>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>`;
+                    break;
+                case 'boardingPassInteractive':
+                    content = `
+                        <div class="w-full max-w-4xl mx-auto fade-in">
+                            <h2 class="font-epic text-4xl text-textMain mb-4 tracking-widest uppercase border-b-2 border-panelHover inline-block pb-2"><i class="fa-solid fa-passport mr-2"></i> ${d.title}</h2>
+                            <p class="font-ui text-accentGold font-bold text-sm mb-6 uppercase tracking-widest animate-pulse"><i class="fa-solid fa-hand-pointer mr-2"></i> CLICK YELLOW TEXT TO REVEAL GRAMMAR</p>
+                            
+                            <div class="boarding-pass w-full mb-10">
+                                <div class="bp-left">
+                                    <div class="bp-cutout-top"></div><div class="bp-cutout-bottom"></div>
+                                    <div class="flex justify-between items-center mb-6 border-b border-gray-300 pb-4">
+                                        <div>
+                                            <p class="font-ui text-xs text-gray-500 font-bold uppercase">From</p>
+                                            <p class="font-epic text-4xl text-bgBase leading-none">${d.from}</p>
+                                        </div>
+                                        <i class="fa-solid fa-plane text-2xl text-accentGreen"></i>
+                                        <div class="text-right">
+                                            <p class="font-ui text-xs text-gray-500 font-bold uppercase">To</p>
+                                            <p class="font-epic text-4xl text-bgBase leading-none">${d.to}</p>
+                                        </div>
+                                    </div>
+                                    <p class="font-ui text-xl text-bgBase font-medium leading-relaxed">${d.text}</p>
+                                </div>
+                                <div class="bp-right flex flex-col justify-center items-center text-center">
+                                    <i class="fa-solid fa-qrcode text-6xl text-bgBase mb-4 opacity-80"></i>
+                                    <p class="font-ui text-xs font-bold text-gray-500 uppercase">Class</p>
+                                    <p class="font-epic text-2xl text-accentGreen mb-2">FIRST</p>
+                                    <p class="font-ui text-xs font-bold text-gray-500 uppercase">Est</p>
+                                    <p class="font-epic text-xl text-bgBase">${d.date}</p>
+                                </div>
+                            </div>
+                            
+                            <div id="grammar-modal" class="hidden mt-8 ws-panel border-l-4 border-accentGold p-6 rounded relative overflow-hidden shadow-2xl fade-in">
+                                <div class="absolute -right-4 -bottom-4 text-6xl text-bgBase opacity-40"><i class="fa-solid fa-book-open"></i></div>
+                                <div class="flex items-center gap-3 mb-4 border-b border-panelHover pb-3">
+                                    <span class="bg-accentGold text-bgBase font-epic px-3 py-1 text-sm tracking-widest uppercase rounded-sm" id="modal-title">GRAMMAR</span>
+                                </div>
+                                <p class="font-ui text-lg text-textMain mb-6 relative z-10" id="modal-def">Definition here.</p>
+                                <p class="font-ui text-sm text-textMuted font-bold mb-2 uppercase tracking-widest relative z-10">Teacher Prompt</p>
+                                <p class="font-epic text-2xl text-textMain italic mb-2 relative z-10" id="modal-q">"Question?"</p>
+                                <p class="font-epic text-accentGold text-2xl tracking-wide relative z-10" id="modal-starter">"Starter..."</p>
+                            </div>
+                        </div>`;
+                    break;
+                case 'tacticalBoard':
+                    let shuffled = [...d.blocks].sort(()=>Math.random()-0.5);
+                    content = `
+                        <div class="w-full max-w-4xl mx-auto fade-in text-center">
+                            <h2 class="font-epic text-5xl text-textMain mb-8 uppercase tracking-widest">${d.title}</h2>
+                            
+                            <div id="decoder-ans" class="min-h-[140px] pitch-bg rounded-lg p-6 mb-10 flex flex-wrap gap-4 justify-center items-center shadow-xl">
+                                <div class="pitch-lines"></div><div class="pitch-circle"></div>
+                                <div id="decoder-placeholder" class="relative z-10 text-white/50 font-epic text-2xl tracking-widest"><i class="fa-solid fa-users mr-2"></i> Place players here</div>
+                            </div>
+                            
+                            <div id="decoder-bank" class="flex flex-wrap gap-4 justify-center mb-12">
+                                ${shuffled.map(w => `<button onclick="moveBlock(this)" class="player-pill px-6 py-3 text-xl rounded-full relative z-10 hover:bg-accentGold transition-colors">${w}</button>`).join('')}
+                            </div>
+                            
+                            <button id="verify-btn" onclick="checkDecoder('${d.correct}')" class="btn-sport px-16 py-4 rounded text-xl">CONFIRM TACTIC</button>
+                            
+                            <div id="decoder-followup" class="hidden mt-8">
+                                ${buildSpeakingPrompt(d.followUpQ, d.starter)}
+                            </div>
+                        </div>`;
+                    break;
+                case 'shift':
+                    content = `
+                        <div class="w-full text-center fade-in flex flex-col items-center justify-center h-full">
+                            <i class="fa-solid fa-stopwatch text-8xl text-accentGreen mb-8 drop-shadow-lg"></i>
+                            <h1 class="font-epic text-6xl md:text-8xl text-textMain mb-6 tracking-widest uppercase">${d.title}</h1>
+                            <div class="max-w-2xl mx-auto text-center ws-panel p-8 rounded-xl border-l-8 border-accentGreen mb-12">
+                                <p class="font-ui text-xl text-textMain font-bold leading-relaxed">${d.desc}</p>
+                            </div>
+                            <button onclick="nav(1)" class="btn-sport px-16 py-4 rounded text-xl">RESUME MATCH</button>
+                        </div>`;
+                    break;
+                case 'lever':
+                    content = `
+                        <div class="w-full max-w-5xl mx-auto fade-in text-center flex flex-col items-center justify-center h-full">
+                            <h2 class="font-epic text-5xl text-textMain mb-12 tracking-widest uppercase">${d.title}</h2>
+                            
+                            <div class="flex items-center justify-between w-full bg-panelDark p-12 border-2 border-panelHover rounded-xl mb-12 shadow-xl">
+                                <div class="w-5/12 text-right pr-8 border-r-2 border-panelHover">
+                                    <p id="lvr-c-a" class="font-epic text-accentGreen text-2xl tracking-widest mb-2 transition-opacity uppercase">${d.conceptA}</p>
+                                    <p id="lvr-t-a" class="font-ui text-2xl text-textMain font-bold transition-opacity">${d.textA}</p>
+                                </div>
+                                
+                                <div class="w-2/12 flex justify-center absolute left-1/2 -translate-x-1/2 z-10">
+                                    <div class="lever-track" id="grammar-lever" onclick="toggleLever()">
+                                        <div class="lever-thumb"></div>
+                                    </div>
+                                </div>
+
+                                <div class="w-5/12 text-left pl-8 border-l-2 border-panelHover">
+                                    <p id="lvr-c-b" class="font-epic text-accentGold text-2xl tracking-widest mb-2 opacity-30 transition-opacity uppercase">${d.conceptB}</p>
+                                    <p id="lvr-t-b" class="font-ui text-2xl text-textMain font-bold opacity-30 transition-opacity">${d.textB}</p>
+                                </div>
+                            </div>
+
+                            <div class="bg-panelDark border-l-4 border-accentGold p-6 max-w-3xl rounded">
+                                <p class="font-ui text-lg text-textMain font-bold leading-relaxed"><i class="fa-solid fa-lightbulb text-accentGold mr-3"></i> ${d.rule}</p>
+                            </div>
+                        </div>`;
+                    state.mechanics.leverState = false;
+                    break;
+                case 'mcqVar':
+                    content = `
+                        <div class="w-full max-w-4xl mx-auto fade-in flex flex-col items-center">
+                            <h2 class="font-epic text-4xl text-textMain mb-6 tracking-widest uppercase">${d.title}</h2>
+                            
+                            <div class="var-monitor w-full max-w-3xl aspect-video mb-10 flex flex-col items-center justify-center p-8 text-center relative">
+                                <div class="var-scanline"></div>
+                                <div id="var-result" class="var-overlay"></div>
+                                <p class="font-ui text-3xl font-bold text-white relative z-10 mb-8 leading-relaxed">"${d.q}"</p>
+                                
+                                <div class="flex flex-wrap justify-center gap-4 relative z-10 w-full" id="var-options">
+                                    ${d.options.map((opt, i) => `
+                                        <button onclick="checkVar(this, ${i}, ${d.correct})" class="flex-1 min-w-[150px] bg-panelHover border-2 border-white/20 text-white font-epic text-3xl py-3 rounded hover:bg-accentGold transition-colors uppercase tracking-widest">${opt}</button>
+                                    `).join('')}
+                                </div>
+                            </div>
+                            
+                            <div id="follow-up-box" class="hidden w-full max-w-3xl">
+                                ${buildSpeakingPrompt(d.followUpQ, d.starter)}
+                            </div>
+                        </div>`;
+                    break;
+                case 'irregularVar':
+                    content = `
+                        <div class="w-full max-w-4xl mx-auto fade-in flex flex-col items-center">
+                            <h2 class="font-epic text-4xl text-accentRed mb-4 tracking-widest uppercase glow-red"><i class="fa-solid fa-triangle-exclamation mr-2"></i> ${d.title}</h2>
+                            <p class="font-ui text-textMuted mb-10 font-bold uppercase tracking-widest">${d.instruction}</p>
+                            
+                            <div class="flex w-full gap-8 mb-10">
+                                <div class="flex-1 ws-panel p-8 rounded-xl border-t-8 border-accentGreen text-center">
+                                    <h3 class="font-epic text-5xl text-accentGreen mb-6 uppercase">GOOD</h3>
+                                    <div class="space-y-4 font-ui text-2xl font-bold">
+                                        <div class="bg-panelDark p-4 rounded border border-panelHover flex justify-between"><span class="text-textMuted uppercase text-sm mt-1">Comparative</span> <span class="text-textMain">${d.goodComp}</span></div>
+                                        <div class="bg-panelDark p-4 rounded border border-panelHover flex justify-between"><span class="text-textMuted uppercase text-sm mt-1">Superlative</span> <span class="text-accentGold">${d.goodSup}</span></div>
+                                    </div>
+                                </div>
+                                <div class="flex-1 ws-panel p-8 rounded-xl border-t-8 border-accentRed text-center">
+                                    <h3 class="font-epic text-5xl text-accentRed mb-6 uppercase">BAD</h3>
+                                    <div class="space-y-4 font-ui text-2xl font-bold">
+                                        <div class="bg-panelDark p-4 rounded border border-panelHover flex justify-between"><span class="text-textMuted uppercase text-sm mt-1">Comparative</span> <span class="text-textMain">${d.badComp}</span></div>
+                                        <div class="bg-panelDark p-4 rounded border border-panelHover flex justify-between"><span class="text-textMuted uppercase text-sm mt-1">Superlative</span> <span class="text-accentGold">${d.badSup}</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <button onclick="triggerPraise('REVIEWED!', 'EXCEPTIONS MEMORIZED'); nav(1)" class="btn-sport px-16 py-4 rounded text-xl">ACKNOWLEDGE IRREGULARS</button>
+                        </div>`;
+                    break;
+                case 'qRoulette':
+                    if(!state.activeQuestions) state.activeQuestions = {};
+                    if(!state.activeQuestions[state.step]) state.activeQuestions[state.step] = [...d.questions];
+                    const hasQuestionsLeft = state.activeQuestions[state.step].length > 0;
+                    
+                    content = `
+                        <div class="w-full max-w-4xl mx-auto fade-in text-center flex flex-col items-center">
+                            <p class="font-ui text-textMuted font-bold mb-4 uppercase"><i class="fa-solid fa-arrows-spin mr-2"></i> ${d.instruction}</p>
+                            <h2 class="font-epic text-6xl text-textMain mb-10 tracking-widest uppercase">${d.title}</h2>
+                            
+                            <div class="w-full max-w-3xl mb-12 h-48 flex items-center justify-center overflow-hidden relative bg-panelDark border-4 border-panelHover rounded-xl shadow-2xl">
+                                <h3 id="roulette-text-${state.step}" class="font-ui text-3xl md:text-4xl text-accentGold font-bold relative z-20 transition-all duration-75 text-center px-8">
+                                    ${hasQuestionsLeft ? 'Tap Spin to load question' : 'All questions answered!'}
+                                </h3>
+                            </div>
+                            
+                            ${hasQuestionsLeft ? `<button id="spin-btn-${state.step}" onclick="spinRoulette(${state.step})" class="font-epic text-3xl btn-sport px-20 py-4 rounded">SPIN</button>` : `<button onclick="nav(1)" class="font-epic text-3xl btn-sport px-20 py-4 rounded bg-accentGreen text-bgBase border-accentGreen shadow-none">CONTINUE TO MATCH</button>`}
+                            
+                            <div id="roulette-followup-${state.step}" class="hidden w-full mt-8">
+                                <div class="bg-panelHover p-6 rounded-lg border-l-4 border-accentGold flex justify-between items-center shadow-lg">
+                                    <p class="font-epic text-2xl text-textMain tracking-widest uppercase"><i class="fa-solid fa-microphone mr-3 text-accentGold"></i> Speak your answer to the Teacher</p>
+                                    <button onclick="finishRouletteTurn(${state.step})" class="bg-accentGold text-bgBase font-bold font-ui px-6 py-2 rounded shadow">I Answered</button>
+                                </div>
+                            </div>
+                        </div>`;
+                    break;
+                case 'commentatorBooth':
+                    content = `
+                        <div class="w-full max-w-4xl mx-auto fade-in text-center flex flex-col items-center">
+                            <h2 class="font-epic text-5xl text-textMain mb-4 tracking-widest uppercase">${d.title}</h2>
+                            <p class="font-ui text-accentGold font-bold mb-10 uppercase">${d.prompt}</p>
+                            
+                            <div class="commentator-screen w-full max-w-3xl aspect-video mb-8 flex flex-col items-center justify-center p-8 text-center">
+                                <div class="live-badge">LIVE</div>
+                                <i class="fa-solid fa-bolt text-6xl text-textMuted mb-6 opacity-30"></i>
+                                <p class="font-ui text-2xl font-bold text-textMain leading-relaxed italic">"${d.situation}"</p>
+                            </div>
+                            
+                            <div class="flex flex-col items-center justify-center mb-6">
+                                <button id="mic-btn" onclick="togglePressMic()" class="w-28 h-28 rounded-full bg-panelHover border-4 border-panelDark hover:border-accentGold transition-all group flex items-center justify-center shadow-inner relative overflow-hidden">
+                                    <i class="fa-solid fa-microphone text-5xl text-textMuted group-hover:text-accentGold transition-colors relative z-10" id="mic-icon"></i>
+                                    <div class="absolute inset-0 bg-accentRed opacity-0 group-[.recording]:opacity-30 transition-opacity"></div>
+                                </button>
+                                <p id="mic-status" class="font-ui text-textMuted font-bold uppercase text-sm mt-6">Tap to Commentate</p>
+                            </div>
+                        </div>`;
+                    break;
+                case 'crossroads':
+                    content = `
+                        <div class="w-full max-w-5xl mx-auto fade-in text-center">
+                            <p class="font-epic text-accentRed text-2xl mb-2 uppercase tracking-widest">Crucial Decision</p>
+                            <h2 class="font-epic text-6xl text-textMain mb-10 tracking-widest uppercase">${d.title}</h2>
+                            <div class="p-10 mb-12 max-w-3xl mx-auto text-center border-4 border-panelHover bg-panelDark rounded-xl shadow-xl">
+                                <p class="font-ui text-2xl text-textMain font-bold leading-relaxed">"${d.dilemma}"</p>
+                            </div>
+                            
+                            <div class="flex flex-col md:flex-row justify-center gap-6 px-4">
+                                <button onclick="triggerPraise('DECISION MADE', 'FAN CHOICE'); nav(1)" class="flex-1 py-10 bg-panelHover rounded-xl hover:bg-accentGold group transition-all relative border-2 border-transparent hover:border-bgBase">
+                                    <span class="font-epic text-4xl text-textMain group-hover:text-bgBase block mb-2 tracking-widest uppercase">${d.opt1}</span>
+                                    <span class="font-ui font-bold text-textMuted text-sm uppercase group-hover:text-bgBase/70 transition-colors">"I would..."</span>
+                                </button>
+                                <button onclick="triggerPraise('DECISION MADE', 'FAN CHOICE'); nav(1)" class="flex-1 py-10 bg-panelHover rounded-xl hover:bg-accentGold group transition-all relative border-2 border-transparent hover:border-bgBase">
+                                    <span class="font-epic text-4xl text-textMain group-hover:text-bgBase block mb-2 tracking-widest uppercase">${d.opt2}</span>
+                                    <span class="font-ui font-bold text-textMuted text-sm uppercase group-hover:text-bgBase/70 transition-colors">"I would..."</span>
+                                </button>
+                            </div>
+                        </div>`;
+                    break;
+                case 'homework':
+                    content = `
+                        <div class="w-full max-w-md mx-auto fade-in text-center flex flex-col items-center bg-panelDark p-12 border-t-8 border-accentGreen rounded-xl shadow-2xl">
+                            <i class="fa-solid fa-mobile-screen-button text-7xl text-accentGreen mb-6"></i>
+                            <h2 class="font-epic text-5xl text-textMain mb-4 tracking-widest uppercase">${d.title}</h2>
+                            <p class="font-ui text-textMuted text-sm font-bold leading-relaxed mb-10 uppercase">${d.desc}</p>
+                            <a href="#" class="w-full btn-sport py-4 rounded text-xl inline-block">OPEN ${d.appName}</a>
+                        </div>`;
+                    break;
+                case 'curtain':
+                    content = `
+                        <div class="w-full max-w-3xl mx-auto fade-in text-center">
+                            <div class="inline-block mb-8">
+                                <i class="fa-solid fa-trophy text-9xl text-accentGold drop-shadow-[0_0_30px_rgba(243,167,18,0.5)]"></i>
+                            </div>
+                            <h1 class="font-epic text-6xl md:text-8xl text-textMain mb-6 tracking-widest uppercase">${d.title}</h1>
+                            <p class="font-ui text-lg text-textMuted font-bold mb-12 uppercase leading-relaxed max-w-xl mx-auto">${d.desc}</p>
+                            
+                            <div class="bg-panelDark p-8 inline-block min-w-[300px] mb-16 rounded-xl border-2 border-panelHover shadow-lg">
+                                <p class="font-ui text-sm text-textMuted mb-2 uppercase font-bold">Final Match Score</p>
+                                <p class="font-epic text-7xl text-accentGold">${state.xp}</p>
+                            </div>
+                            
+                            <br>
+                            <button onclick="location.reload()" class="font-ui text-textMuted text-sm font-bold hover:text-white border-b-2 border-transparent hover:border-white transition-colors uppercase pb-1">Return to Locker Room</button>
+                        </div>`;
+                    break;
+            }
+
+            container.innerHTML = content;
+        }
+
+        // --- SPECIFIC MECHANICS LOGIC ---
+        
+        function registerID() {
+            let val = document.getElementById('id-input').value.trim();
+            if(val) {
+                state.studentName = val;
+                triggerPraise('TICKET READY!', 'HAVE A GOOD FLIGHT');
+                setTimeout(() => nav(1), 1500);
+            }
+        }
+
+        let currentMood = null;
+        function selectMoodboard(btn, moodId) {
+            const btns = document.querySelectorAll('.mood-btn');
+            btns.forEach(b => {
+                b.classList.remove('border-accentGreen', 'bg-accentGreen/10');
+                b.querySelector('i').classList.remove('text-accentGreen');
+                b.querySelector('i').classList.add('text-textMuted');
+            });
+            
+            btn.classList.add('border-accentGreen', 'bg-accentGreen/10');
+            btn.querySelector('i').classList.remove('text-textMuted');
+            btn.querySelector('i').classList.add('text-accentGreen');
+            
+            const icon = document.getElementById('mood-icon');
+            icon.classList.remove('fa-map-location-dot', 'fa-hotdog', 'fa-pepper-hot', 'fa-bowl-food', 'text-white/20');
+            icon.classList.add('text-white', 'scale-125');
+            
+            if(moodId === 'hotdog') icon.classList.add('fa-hotdog');
+            if(moodId === 'nachos') icon.classList.add('fa-pepper-hot');
+            if(moodId === 'poutine') icon.classList.add('fa-bowl-food');
+            
+            currentMood = moodId;
+            const confirmBtn = document.getElementById('confirm-mood-btn');
+            confirmBtn.classList.remove('opacity-50', 'pointer-events-none');
+        }
+
+        function confirmMoodboard() {
+            if(!currentMood) return;
+            const confirmBtn = document.getElementById('confirm-mood-btn');
+            confirmBtn.classList.add('hidden');
+            
+            const btns = document.querySelectorAll('.mood-btn');
+            btns.forEach(b => b.classList.add('pointer-events-none'));
+            
+            triggerPraise('ORDER PLACED!', 'ENJOY THE FOOD');
+            const fu = document.getElementById('follow-up-box');
+            if(fu) fu.classList.remove('hidden');
+        }
+
+        function openGrammarModal(element, title, def, q, starter) {
+            const links = document.querySelectorAll('.grammar-link');
+            links.forEach(l => l.classList.remove('active'));
+            element.classList.add('active');
+            
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-def').innerText = def;
+            document.getElementById('modal-q').innerText = `"${q}"`;
+            document.getElementById('modal-starter').innerText = `"${starter}"`;
+            
+            document.getElementById('grammar-modal').classList.remove('hidden');
+            triggerPraise('GRAMMAR LOGGED', 'REFEREE READY');
+        }
+
+        function checkVar(btn, selectedIndex, correctIndex) {
+            const container = document.getElementById('var-options');
+            const overlay = document.getElementById('var-result');
+            
+            Array.from(container.children).forEach(b => b.disabled = true);
+            
+            overlay.classList.remove('var-goal', 'var-offside');
+            
+            if(selectedIndex === correctIndex) {
+                overlay.innerText = "GOAL!";
+                overlay.classList.add('var-goal');
+                overlay.style.opacity = 1;
+                triggerPraise('GOAL!', 'CORRECT GRAMMAR');
+                setTimeout(() => { overlay.style.opacity = 0; }, 2000);
+                
+                const fu = document.getElementById('follow-up-box');
+                if(fu) fu.classList.remove('hidden');
+            } else {
+                overlay.innerText = "OFFSIDE!";
+                overlay.classList.add('var-offside');
+                overlay.style.opacity = 1;
+                takeDamage();
+                setTimeout(() => { overlay.style.opacity = 0; 
+                    Array.from(container.children).forEach(b => b.disabled = false);
+                }, 2000);
+            }
+        }
+
+        let selectedPill = null;
+        function selectVocab(el) {
+            if(selectedPill) selectedPill.classList.remove('border-accentGreen', 'text-accentGreen');
+            selectedPill = el;
+            el.classList.add('border-accentGreen', 'text-accentGreen');
+        }
+        function dropVocab(slot, correctWord) {
+            if(!selectedPill) return;
+            if(selectedPill.getAttribute('data-word') === correctWord) {
+                slot.innerHTML = `<span class="font-epic text-3xl text-bgBase bg-accentGreen px-4 py-1 rounded tracking-widest uppercase">${correctWord}</span>`;
+                slot.classList.replace('border-dashed', 'border-solid');
+                slot.classList.replace('border-textMuted', 'border-accentGreen');
+                slot.classList.replace('bg-bgBase', 'bg-accentGreen/10');
+                selectedPill.style.display = 'none';
+                selectedPill = null;
+                const total = document.querySelectorAll('.vocab-drop').length;
+                const done = document.querySelectorAll('.vocab-drop.border-accentGreen').length;
+                if(total === done) triggerPraise('KNOWLEDGE!', 'VOCABULARY MATCHED');
+            } else {
+                takeDamage();
+            }
+        }
+
+        function moveBlock(btn) {
+            const ans = document.getElementById('decoder-ans');
+            const bank = document.getElementById('decoder-bank');
+            const placeholder = document.getElementById('decoder-placeholder');
+            
+            if(btn.parentElement === bank) {
+                ans.appendChild(btn);
+                if(placeholder) placeholder.style.display = 'none';
+            } else {
+                bank.appendChild(btn);
+                if(ans.querySelectorAll('button').length === 0 && placeholder) placeholder.style.display = 'block';
+            }
+        }
+        
+        function checkDecoder(correctStr) {
+            const current = Array.from(document.getElementById('decoder-ans').querySelectorAll('button')).map(b => b.innerText).join(' ');
+            if(current.toUpperCase() === correctStr.toUpperCase()) {
+                document.getElementById('decoder-ans').style.borderColor = '#47A025';
+                document.getElementById('verify-btn').classList.add('hidden');
+                const fu = document.getElementById('decoder-followup');
+                if(fu) fu.classList.remove('hidden');
+                triggerPraise('TACTIC PERFECT!', 'FORMATION SET');
+            } else {
+                takeDamage();
+            }
+        }
+
+        function toggleLever() {
+            const track = document.getElementById('grammar-lever');
+            state.mechanics.leverState = !state.mechanics.leverState;
+            const [ca, ta, cb, tb] = ['lvr-c-a', 'lvr-t-a', 'lvr-c-b', 'lvr-t-b'].map(id => document.getElementById(id));
+            if(state.mechanics.leverState) {
+                track.classList.add('toggled');
+                ca.classList.add('opacity-30'); ta.classList.add('opacity-30');
+                cb.classList.remove('opacity-30'); tb.classList.remove('opacity-30');
+            } else {
+                track.classList.remove('toggled');
+                ca.classList.remove('opacity-30'); ta.classList.remove('opacity-30');
+                cb.classList.add('opacity-30'); tb.classList.add('opacity-30');
+            }
+        }
+
+        let rouletteSpinning = false;
+        function spinRoulette(stepIndex) {
+            if(rouletteSpinning) return;
+            const qList = state.activeQuestions[stepIndex];
+            if(qList.length === 0) return; 
+            
+            rouletteSpinning = true;
+            const textEl = document.getElementById(`roulette-text-${stepIndex}`); 
+            const btn = document.getElementById(`spin-btn-${stepIndex}`); 
+            const fu = document.getElementById(`roulette-followup-${stepIndex}`);
+            
+            btn.classList.add('opacity-50', 'pointer-events-none'); 
+            fu.classList.add('hidden'); 
+            textEl.classList.replace('text-accentGold', 'text-textMain');
+            
+            let spins = 0; const maxSpins = 20;
+            const originalList = lesson[stepIndex].questions;
+            
+            const interval = setInterval(() => {
+                textEl.innerText = originalList[Math.floor(Math.random() * originalList.length)]; 
+                spins++;
+                
+                if(spins >= maxSpins) {
+                    clearInterval(interval);
+                    const randomIndex = Math.floor(Math.random() * qList.length);
+                    const selectedQ = qList[randomIndex];
+                    
+                    qList.splice(randomIndex, 1); // Consume the question
+                    
+                    textEl.innerText = `"${selectedQ}"`; 
+                    textEl.classList.replace('text-textMain', 'text-accentGold');
+                    
+                    fu.classList.remove('hidden'); 
+                    rouletteSpinning = false;
+                }
+            }, 80);
+        }
+        
+        function finishRouletteTurn(stepIndex) {
+            const btn = document.getElementById(`spin-btn-${stepIndex}`);
+            const fu = document.getElementById(`roulette-followup-${stepIndex}`);
+            
+            fu.classList.add('hidden');
+            triggerPraise('WELL SPOKEN!', 'GOOD ENGLISH');
+            
+            setTimeout(() => render(), 1000); 
+        }
+
+        function togglePressMic() {
+            const btn = document.getElementById('mic-btn'); 
+            const icon = document.getElementById('mic-icon'); 
+            const status = document.getElementById('mic-status');
+            
+            if(btn.classList.contains('recording')) {
+                btn.classList.remove('recording', 'border-accentRed'); 
+                btn.classList.add('border-accentGreen');
+                
+                icon.classList.replace('fa-stop', 'fa-check'); 
+                icon.classList.replace('text-accentRed', 'text-accentGreen');
+                
+                status.innerText = "COMMENTARY SAVED"; 
+                status.classList.replace('text-accentRed', 'text-accentGreen');
+                
+                triggerPraise('GREAT CALL!', 'FANS LOVED IT');
+            } else if(!btn.classList.contains('border-accentGreen')) {
+                btn.classList.add('recording', 'border-accentRed'); 
+                btn.classList.remove('border-panelDark');
+                
+                icon.classList.replace('fa-microphone', 'fa-stop'); 
+                icon.classList.replace('text-textMuted', 'text-accentRed');
+                
+                status.innerText = "RECORDING... TAP TO STOP"; 
+                status.classList.replace('text-textMuted', 'text-accentRed');
+            }
+        }
+
+        // --- CONFETTI ENGINE ---
+        function shootConfetti() {
+            const cCanvas = document.createElement('canvas'); cCanvas.style.position = 'fixed'; cCanvas.style.inset = 0; cCanvas.style.pointerEvents = 'none'; cCanvas.style.zIndex = 9999; document.body.appendChild(cCanvas);
+            const cCtx = cCanvas.getContext('2d'); cCanvas.width = window.innerWidth; cCanvas.height = window.innerHeight;
+            const pieces = []; const colors = ['#F3A712', '#47A025', '#FFFFFF']; // Gold, Green, White
+            for(let i=0; i<80; i++) pieces.push({ x: cCanvas.width/2, y: cCanvas.height/2+100, vx: (Math.random()-0.5)*25, vy: (Math.random()-1)*20-5, size: Math.random()*10+5, color: colors[Math.floor(Math.random()*colors.length)], rot: Math.random()*360, rotSpeed: (Math.random()-0.5)*10 });
+            function animateC() {
+                cCtx.clearRect(0, 0, cCanvas.width, cCanvas.height); let active = false;
+                pieces.forEach(p => { p.x += p.vx; p.y += p.vy; p.vy += 0.5; p.rot += p.rotSpeed; if(p.y < cCanvas.height) active = true; cCtx.save(); cCtx.translate(p.x, p.y); cCtx.rotate(p.rot*Math.PI/180); cCtx.fillStyle = p.color; cCtx.fillRect(-p.size/2, -p.size/2, p.size, p.size); cCtx.restore(); });
+                if(active) requestAnimationFrame(animateC); else document.body.removeChild(cCanvas);
+            }
+            animateC();
+        }
+
+        window.onload = () => { updateHUD(); };
+    </script>
+</body>
+</html>
+```
+
+Pode testar a `ULTIMATE ROULETTE` e a nova `COMMENTATOR BOOTH` que agora sim, exigem bastante mais ação e pensamento rápido do aluno A2.
